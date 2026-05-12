@@ -1,0 +1,28 @@
+{
+  "_comment": "Semantic synonym groups for Layer 7 healing. Add your app-specific synonyms here.",
+  "_usage": "Each group contains words that mean the same thing in a UI context.",
+  "_custom": "Add your own groups at the bottom under 'custom'.",
+
+  "cancel":   ["reset", "back", "close", "dismiss", "discard", "abort", "exit", "no"],
+  "submit":   ["save", "confirm", "apply", "ok", "done", "finish", "complete", "yes", "proceed"],
+  "search":   ["find", "filter", "go", "look up", "query", "lookup"],
+  "username": ["email", "login", "user", "user name", "user id", "userid", "account"],
+  "password": ["pass", "pwd", "secret", "passphrase"],
+  "add":      ["create", "new", "insert", "plus"],
+  "edit":     ["update", "modify", "change", "pencil"],
+  "delete":   ["remove", "trash", "bin", "clear"],
+  "next":     ["continue", "forward", "proceed", "advance"],
+  "previous": ["prev", "back", "prior"],
+  "login":    ["sign in", "log in", "signin", "enter"],
+  "logout":   ["sign out", "log out", "signout", "exit"],
+  "home":     ["dashboard", "main", "overview", "start"],
+  "profile":  ["account", "settings", "preferences", "my info"],
+  "upload":   ["attach", "browse", "choose file", "select file"],
+  "download": ["export", "save as", "get"],
+
+  "_custom_groups": {
+    "_comment": "Add your app-specific synonyms here. Example:",
+    "approve":  ["accept", "authorize", "validate"],
+    "reject":   ["deny", "decline", "refuse"]
+  }
+}

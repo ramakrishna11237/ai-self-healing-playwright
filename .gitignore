@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Test artifacts
+test-results/
+*.png
+*.webm
+*.zip
+*.har
+
+# Environment — contains credentials
+.env
+
+# Logs
+*.log
+
+# Learning DB — runtime data
+learning-db.json
+learning-db.json.bak
+learning-db.json.tmp
+learning-db.json.lock
+
+# Session files
+**/*-session.json
+**/*.session.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive files
+cookies.txt
+bank_cookies.txt
+bank_response.html
+
+# Patent sensitive — do not publish
+BUSINESS_CASE.md
+EXECUTIVE_SUMMARY.md
+PRESENTATION_OUTLINE.md
+PPT_CONTENT.txt
+DIAGRAMS_FOR_PPT.txt
+management-presentation-complete.md
+RESUME.txt
+
+# Build output
+dist/
+coverage/

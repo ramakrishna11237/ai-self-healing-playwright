@@ -1,0 +1,28 @@
+services:
+
+  # ── ParaBank ──────────────────────────────────────────────────────────────────
+  # URL: http://localhost:8090/parabank
+  # Credentials: john / demo
+  # Replaces: https://parabank.parasoft.com (which is slow/flaky)
+  parabank:
+    image: parasoft/parabank:latest
+    container_name: parabank_local
+    ports:
+      - "8090:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/parabank/index.htm"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── The Internet (Herokuapp clone) ───────────────────────────────────────────
+  # URL: http://localhost:7080
+  # Replaces: https://the-internet.herokuapp.com (which can be slow)
+  the-internet:
+    image: gprestes/the-internet:latest
+    container_name: the_internet_local
+    ports:
+      - "7080:4567"
+    restart: unless-stopped

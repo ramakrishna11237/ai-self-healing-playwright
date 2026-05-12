@@ -1,0 +1,45 @@
+Copyright (c) 2026 Venkata Rama Krishna Pola
+Email: polavenkataramakrishna@gmail.com
+
+PATENT PENDING
+Provisional Patent Application Filed: April 10, 2026
+Title: System and Method for Self-Healing Automated UI Test Execution
+       Using a Multi-Layer Recovery Engine with Persistent Locator Learning
+
+ALL RIGHTS RESERVED.
+
+This software and its source code are the exclusive intellectual property
+of Venkata Rama Krishna Pola. The following core algorithm files are
+protected under copyright and pending patent:
+
+  - src/core/Runner.ts
+  - src/core/WorkflowRunner.ts
+  - src/healing/SelfHeal.ts
+  - src/learning/LearningStore.ts
+  - src/learning/FixApplier.ts
+  - src/engine/PatternEngine.ts
+  - src/engine/LocatorEngine.ts
+  - src/engine/SmartLocatorEngine.ts
+  - src/engine/RetryEngine.ts
+  - src/dom/DOMCapture.ts
+  - src/dom/DOMDiff.ts
+  - src/dom/SmartDOMFilter.ts
+  - src/dom/VisualDiff.ts
+
+RESTRICTIONS:
+  1. No part of this software may be reproduced, distributed, or transmitted
+     in any form or by any means without prior written permission.
+  2. No part of this software may be used to create derivative works,
+     competing products, or commercial services without written permission.
+  3. The patented algorithms described herein may not be implemented in
+     any other software without a license from the copyright holder.
+
+PERMITTED USE:
+  - Personal, non-commercial evaluation only.
+  - Academic research with proper attribution.
+
+For licensing inquiries, contact: polavenkataramakrishna@gmail.com
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY ARISING FROM THE USE OF THIS SOFTWARE.
