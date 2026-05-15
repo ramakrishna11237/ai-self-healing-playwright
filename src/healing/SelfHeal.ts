@@ -47,6 +47,16 @@ async function scopeToMainContent(
   return null;
 }
 
+function inferElementType(locator: string): string {
+  if (!locator) return 'unknown';
+  if (/getByRole\('button'|button/i.test(locator)) return 'button';
+  if (/getByRole\('link'|^a\[|a:has-text/i.test(locator)) return 'link';
+  if (/getByRole\('textbox'|input|textarea/i.test(locator)) return 'input';
+  if (/getByRole\('checkbox'|checkbox/i.test(locator)) return 'checkbox';
+  if (/getByRole\('combobox'|select/i.test(locator)) return 'select';
+  return 'unknown';
+}
+
 export async function selfHeal(
   page: Page,
   step: Step,
@@ -85,8 +95,8 @@ export async function selfHeal(
 
     const safetyResult = SafetyCheckEngine.shouldRejectHeal({
       locator, action,
-      originalContext: { action, elementType: 'unknown' },
-      newContext: { action, elementType: 'unknown' },
+      originalContext: { action, elementType: inferElementType(step.codegenLocator ?? step.locator ?? '') },
+      newContext: { action, elementType: inferElementType(locator) },
     });
     if (safetyResult.reject) {
       Logger.warn(`Self-heal: SafetyCheckEngine blocked "${locator}" — ${safetyResult.reasons.join(', ')}`);

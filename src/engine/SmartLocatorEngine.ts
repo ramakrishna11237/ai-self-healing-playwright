@@ -71,26 +71,15 @@ export class SmartLocatorEngine {
       confidence: 100,
       strategy: 'data-testid',
     });
-    candidates.push({
-      locator: `[data-testid*="${esc}"]`,
-      confidence: 90,
-      strategy: 'data-testid-partial',
-    });
     candidates.push({ locator: `[data-cy="${esc}"]`, confidence: 100, strategy: 'data-cy' });
     candidates.push({ locator: `[data-qa="${esc}"]`, confidence: 100, strategy: 'data-qa' });
 
     // ID
     candidates.push({ locator: `#${n.replace(/\s+/g, '-')}`, confidence: 95, strategy: 'id' });
     candidates.push({ locator: `[id="${esc}"]`, confidence: 95, strategy: 'id-attr' });
-    candidates.push({ locator: `[id*="${esc}"]`, confidence: 60, strategy: 'id-partial' });
 
     // ARIA
     candidates.push({ locator: `[aria-label="${esc}"]`, confidence: 90, strategy: 'aria-label' });
-    candidates.push({
-      locator: `[aria-label*="${esc}"]`,
-      confidence: 55,
-      strategy: 'aria-label-partial',
-    });
 
     // Playwright semantic getBy*
     candidates.push({
@@ -139,13 +128,8 @@ export class SmartLocatorEngine {
       strategy: 'role+name',
     });
 
-    // Label
+    // Label — exact only
     candidates.push({ locator: `getByLabel('${n}')`, confidence: 80, strategy: 'label' });
-    candidates.push({
-      locator: `getByLabel('${n}', { exact: false })`,
-      confidence: 55,
-      strategy: 'label-partial',
-    });
 
     // Name attribute — exact first, lowercase only if name differs from original
     // Lazy lowercase: only add if it differs — avoids doubling candidates unnecessarily
@@ -157,11 +141,6 @@ export class SmartLocatorEngine {
         strategy: 'name-lower',
       });
     }
-    candidates.push({
-      locator: `[name*="${n.toLowerCase()}"]`,
-      confidence: 45,
-      strategy: 'name-partial',
-    });
 
     // Legacy submit buttons — input[type=submit] with value (JSP/old HTML)
     candidates.push({
@@ -182,11 +161,6 @@ export class SmartLocatorEngine {
       locator: `[placeholder="${esc}"]`,
       confidence: 70,
       strategy: 'placeholder-attr',
-    });
-    candidates.push({
-      locator: `[placeholder*="${esc}"]`,
-      confidence: 45,
-      strategy: 'placeholder-partial',
     });
 
     // Exact text

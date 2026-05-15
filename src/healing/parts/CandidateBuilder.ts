@@ -3,40 +3,6 @@ import { Logger } from '../../utils/Logger';
 import { escapeCSSValue, escapeTextValue } from '../../utils/selectors';
 import { extractElementName as extractNameFromCodegen } from '../../engine/LocatorEngine';
 
-// ── Fuzzy matching ────────────────────────────────────────────────────────────
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length, n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
-    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
-  );
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++)
-      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-  return dp[m][n];
-}
-
-const DANGEROUS_PAIRS = new Set([
-  'login|logout', 'logout|login', 'save|delete', 'delete|save',
-  'submit|cancel', 'cancel|submit', 'confirm|cancel', 'cancel|confirm',
-  'add|remove', 'remove|add', 'enable|disable', 'disable|enable',
-  'open|close', 'close|open', 'yes|no', 'no|yes', 'approve|reject', 'reject|approve',
-]);
-
-export function isFuzzyMatch(target: string, candidate: string, maxDistance = 3, cache?: Map<string, boolean>): boolean {
-  const t = target.toLowerCase().trim();
-  const c = candidate.toLowerCase().trim();
-  const key = `${t}|${c}`;
-  if (cache?.has(key)) return cache.get(key)!;
-  if (DANGEROUS_PAIRS.has(key)) { cache?.set(key, false); return false; }
-  let result = false;
-  if (t === c) result = true;
-  else if (c.includes(t) || t.includes(c)) result = true;
-  else if (t.length <= 50 && c.length <= 50) result = levenshtein(t, c) <= maxDistance;
-  cache?.set(key, result);
-  return result;
-}
-
 // ── Snapshot parsing ──────────────────────────────────────────────────────────
 
 export function extractRoleNamesFromSnapshot(snapshot: string): Array<{ role: string; name: string }> {
@@ -105,10 +71,9 @@ export function buildHealCandidates(step: Step, hint?: string, domSnapshot?: str
     candidates.push(
       `text=${txt}`, `[aria-label="${css}"]`, `[title="${css}"]`,
       `[placeholder="${css}"]`, `[placeholder="${cssLower}"]`,
-      `[name="${css}"]`, `[name="${cssLower}"]`, `[name*="${cssLower}"]`,
+      `[name="${css}"]`, `[name="${cssLower}"]`,
       `[value="${css}"]`, `input[type="submit"][value="${css}"]`, `input[value="${css}"]`,
       `button:has-text("${css}")`, `a:has-text("${css}")`, `[data-testid="${css}"]`,
-      `input[type="text"][id*="${cssLower}"]`, `input[id*="${cssLower}"]`,
       `pierce/[aria-label="${css}"]`, `pierce/[name="${css}"]`,
       `pierce/[placeholder="${css}"]`, `pierce/[data-testid="${css}"]`
     );
@@ -119,11 +84,11 @@ export function buildHealCandidates(step: Step, hint?: string, domSnapshot?: str
   if (domSnapshot) {
     const roleNames = extractRoleNamesFromSnapshot(domSnapshot);
     const targetName = (codegenName ?? step.label ?? '').toLowerCase().trim();
-    const fuzzyCache = new Map<string, boolean>();
 
     for (const { role, name: pageName } of roleNames) {
-      if (!targetName || !isFuzzyMatch(targetName, pageName, 4, fuzzyCache)) continue;
-      const isExact = pageName.toLowerCase().trim() === targetName;
+      // Exact match only — fuzzy matching removed to prevent wrong element healing
+      if (!targetName || pageName.toLowerCase().trim() !== targetName) continue;
+
       const css = escapeCSSValue(pageName);
       const txt = escapeTextValue(pageName);
 
@@ -139,8 +104,7 @@ export function buildHealCandidates(step: Step, hint?: string, domSnapshot?: str
         `text=${txt}`, `[aria-label="${css}"]`
       );
 
-      if (!isExact) Logger.debug(`Self-heal: fuzzy DOM match: "${targetName}" ~ "${pageName}" (role: ${role})`);
-      else Logger.debug(`Self-heal: exact DOM match: "${pageName}" (role: ${role})`);
+      Logger.debug(`Self-heal: exact DOM match: "${pageName}" (role: ${role})`);
     }
   }
 

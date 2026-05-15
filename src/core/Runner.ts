@@ -642,43 +642,6 @@ export async function runStepDetailed(page: Page, step: Step): Promise<StepResul
     }
 
     if (isDebug) Logger.timeEnd(label);
-    // ── Layer 7: Element Existence Healing ──────────────────────────────────
-    // All previous layers failed — element may have been renamed/replaced
-    // Try semantic synonyms: Cancel→Reset, Submit→Save, Username→Email, etc.
-    if (isPageAlive(page) && step.label) {
-      try {
-        const layer7 = await ElementExistenceHealer.heal(page, step.label, action);
-        if (layer7?.healed && layer7.locator) {
-          const isCodegen = layer7.locator.startsWith('getBy');
-          const stepL7: Step = isCodegen
-            ? { ...step, codegenLocator: layer7.locator, locator: undefined }
-            : { ...step, locator: layer7.locator, codegenLocator: undefined };
-          if ((await routeAction(page, action, stepL7)) && passesUrlCheck(page, step, action)) {
-            const orig = originalLocator(step) || step.label;
-            if (orig && !GENERIC_LOCATORS.has(layer7.locator)) {
-              updateFix(orig, layer7.locator, true, action, step.label);
-              Logger.info(`🔄 Layer 7 fix stored: "${orig}" → "${layer7.locator}"`);
-            }
-            HealingCircuitBreaker.recordSuccess();
-            Logger.success(`"${step.label}" via Layer 7 (semantic): ${layer7.reason}`);
-            if (isDebug) Logger.timeEnd(label);
-            return ok('selfheal', layer7.locator, 0, layer7.confidence);
-          }
-          layerResults.push({
-            layer: 'Layer 7 (semantic)',
-            reason: `found synonym "${layer7.foundLabel}" but action failed`,
-          });
-        } else {
-          layerResults.push({
-            layer: 'Layer 7 (semantic)',
-            reason: `no semantic synonym found for "${step.label}"`,
-          });
-        }
-      } catch (e) {
-        Logger.debug(`Layer 7 error: ${String(e).slice(0, 80)}`);
-      }
-    }
-
     // Record failure for FailureReport and CircuitBreaker
     HealingCircuitBreaker.recordFailure('medium');
     recordFailure({

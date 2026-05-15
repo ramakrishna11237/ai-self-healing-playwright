@@ -30,20 +30,18 @@ export interface ConfidenceScore {
     layer4: number;
     layer5: number;
     layer6: number;
-    layer7: number;
   };
 }
 
 export class QuantumConfidenceSystem {
   private static readonly CONFIDENCE_THRESHOLDS = {
-    layer1: 99.99, // Pattern recognition — direct execution
-    layer2: 99.9, // Smart locator — confidence-scored
-    layer3: 99.5, // Learned fixes — previously verified
-    layer3_5: 98.0, // AI label prediction
-    layer4: 70.0, // DOM analysis — realistic threshold (was 99.0, blocked everything)
-    layer5: 65.0, // AI full context (was 97.0)
-    layer6: 100.0, // Human verification
-    layer7: 100.0, // Safe execution
+    layer1: 99.99,
+    layer2: 99.9,
+    layer3: 99.5,
+    layer3_5: 98.0,
+    layer4: 70.0,
+    layer5: 65.0,
+    layer6: 100.0,
   };
 
   static calculateCompositeConfidence(
