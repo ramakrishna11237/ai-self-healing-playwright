@@ -1,6 +1,6 @@
 # AI Automation Framework
 
-Enterprise-grade test automation built on Playwright with self-healing locators, learning DB, **9-layer recovery**, local LLM integration, semantic synonym healing, and autonomous diagnostics.
+Enterprise-grade test automation built on Playwright with self-healing locators, learning DB, **8-layer recovery**, local LLM integration, and autonomous diagnostics.
 
 ## Quick Start
 
@@ -30,9 +30,9 @@ npm run report              # open HTML report
 
 ---
 
-## Architecture — 9-Layer Recovery
+## Architecture — 8-Layer Recovery
 
-Every step goes through 9 layers before failing:
+Every step goes through 8 layers before failing:
 
 ```
 Step executes
@@ -41,22 +41,20 @@ Step executes
   │
   ├─ Layer 1:   Direct execution + retry/backoff          ~5ms    ← 95% of steps stop here
   │
-  ├─ Layer 2a:  SmartLocatorEngine (confidence-scored)    ~50ms   ← 30+ candidates, context-aware
+  ├─ Layer 2a:  SmartLocatorEngine (confidence-scored)    ~50ms   ← exact matches only, context-aware
   │             data-testid(100) → id(95) → aria-label(90) → role+name(85) → label(80) → ...
   │
-  ├─ Layer 2b:  Batch strategy fallback (parallel race)   ~50ms   ← getByRole, getByLabel, CSS variants
+  ├─ Layer 2b:  Batch strategy fallback (parallel race)   ~50ms   ← getByRole, getByLabel, CSS exact
   │
   ├─ Layer 3:   Learned fix (learning-db.json cache)      ~2ms    ← previously healed locators
   │
   ├─ Layer 3.5: LLM label prediction (no DOM needed)      ~200ms  ← LLM predicts locator from step label only
   │
-  ├─ Layer 4:   DOM capture + self-heal                   ~50ms   ← targeted container snapshot + fuzzy match
+  ├─ Layer 4:   DOM capture + self-heal (exact match)     ~50ms   ← exact DOM name match only
   │
   ├─ Layer 5:   Ollama LLM (local AI + full DOM)          ~2s     ← LLM reads DOM, suggests locator
   │
-  ├─ Layer 6:   Autonomous Diagnostics                    ~500ms  ← DOM analysis, failure classification
-  │
-  └─ Layer 7:   Semantic Synonym Healing                  ~100ms  ← Cancel→Reset, Submit→Save
+  └─ Layer 6:   Autonomous Diagnostics                    ~500ms  ← DOM analysis, failure classification
 ```
 
 **Confidence scoring in Layer 2a:**
@@ -279,7 +277,7 @@ All settings via environment variables (`.env`):
 ```
 src/
 ├── core/
-│   ├── Runner.ts                  # 9-layer step execution engine
+│   ├── Runner.ts                  # 8-layer step execution engine
 │   └── WorkflowRunner.ts          # Workflow orchestration, retries, budget
 ├── engine/
 │   ├── ActionRouter.ts            # 150+ action types
@@ -390,7 +388,7 @@ Layer 4 fails → Layer 3.5: LLM predicts from step label (no DOM)
 
 ## Autonomous Diagnostics
 
-When all 9 layers fail, Autonomous Diagnostics runs automatically:
+When all 8 layers fail, Autonomous Diagnostics runs automatically:
 
 - Classifies the failure type (locator stale, element hidden, timing, app error, etc.)
 - Analyzes the DOM to find the best candidate element
@@ -409,7 +407,7 @@ When all 9 layers fail, Autonomous Diagnostics runs automatically:
 
 ## Key Metrics
 
-- **9 healing layers** — more than any commercial tool (Healenium=1, Testim=3)
+- **8 healing layers** — more than any commercial tool (Healenium=1, Testim=3)
 - **97-99% pass rate** with Docker infrastructure
 - **7.4 min** full run (reduced from 22 min)
 - **500 entry** learning DB with 30-day TTL decay

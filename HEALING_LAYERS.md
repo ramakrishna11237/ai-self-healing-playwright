@@ -2,13 +2,13 @@
 
 ## Overview
 
-When a test step fails, the framework cascades through 9 layers automatically.
+When a test step fails, the framework cascades through 8 layers automatically.
 Each layer is tried in order. The first layer that succeeds stops the cascade.
 
 ```
 Step fails
     ↓
-Layer 0 → Layer 1 → Layer 2 → Layer 3 → Layer 3.5 → Layer 4 → Layer 5 → Layer 6 → Layer 7
+Layer 0 → Layer 1 → Layer 2 → Layer 3 → Layer 3.5 → Layer 4 → Layer 5 → Layer 6
     ↓
 First success → stores fix in learning-db → returns result
     ↓
