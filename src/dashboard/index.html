@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🤖 AI Test Automation — Live Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
+
+    /* ── Header ── */
+    .header{background:linear-gradient(135deg,#1a1f2e,#0f1117);border-bottom:1px solid #2d3748;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .header h1{font-size:18px;font-weight:700;color:#fff}
+    .header p{color:#718096;font-size:11px;margin-top:3px}
+    .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .live-dot{width:8px;height:8px;border-radius:50%;background:#48bb78;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .live-text{font-size:11px;color:#48bb78;font-weight:600}
+    .refresh-btn{background:#2d3748;border:1px solid #4a5568;color:#e2e8f0;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px}
+    .refresh-btn:hover{background:#4a5568}
+
+    /* ── Role badges ── */
+    .role-badge{padding:4px 10px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase}
+    .role-admin{background:#2d1b69;color:#b794f4}
+    .role-qa{background:#1a365d;color:#63b3ed}
+    .role-manager{background:#1c4532;color:#48bb78}
+    .role-public{background:#2d3748;color:#718096}
+
+    /* ── Status badge ── */
+    .status-badge{padding:6px 14px;border-radius:20px;font-weight:700;font-size:13px}
+    .pass{background:#1c4532;color:#48bb78}
+    .fail{background:#3d1515;color:#fc8181}
+
+    /* ── Layout ── */
+    .container{max-width:1400px;margin:0 auto;padding:20px 28px}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+    @media(max-width:900px){.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+
+    /* ── Cards ── */
+    .card{background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;padding:18px}
+    .card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#718096;margin-bottom:6px}
+    .card .val{font-size:32px;font-weight:700}
+    .card .sub{font-size:11px;color:#718096;margin-top:4px}
+    .card .icon{font-size:24px;margin-bottom:6px}
+
+    /* ── Sections ── */
+    .section{background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;padding:18px;margin-bottom:16px}
+    .section-title{font-size:13px;font-weight:700;color:#e2e8f0;margin-bottom:14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #2d3748;padding-bottom:10px}
+    .section-title span{font-size:16px}
+
+    /* ── Tables ── */
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{text-align:left;padding:8px 10px;color:#718096;font-weight:600;border-bottom:1px solid #2d3748;font-size:10px;text-transform:uppercase;letter-spacing:0.5px}
+    td{padding:9px 10px;border-bottom:1px solid #1e2535;vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#1e2535}
+
+    /* ── Colors ── */
+    .g{color:#48bb78}.y{color:#ecc94b}.r{color:#fc8181}.b{color:#63b3ed}.p{color:#b794f4}
+
+    /* ── Badges ── */
+    .badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600}
+    .badge-blue{background:#1a365d;color:#63b3ed}
+    .badge-green{background:#1c4532;color:#48bb78}
+    .badge-red{background:#3d1515;color:#fc8181}
+    .badge-yellow{background:#3d3000;color:#ecc94b}
+    .badge-purple{background:#2d1b69;color:#b794f4}
+
+    /* ── Progress bars ── */
+    .bar-bg{background:#2d3748;border-radius:4px;height:8px;margin-top:6px;overflow:hidden}
+    .bar{border-radius:4px;height:8px;transition:width 0.8s ease}
+
+    /* ── Charts ── */
+    .chart-container{position:relative;height:240px}
+    .chart-container-sm{position:relative;height:180px}
+
+    /* ── Test lists ── */
+    .test-list{max-height:320px;overflow-y:auto}
+    .test-list::-webkit-scrollbar{width:4px}
+    .test-list::-webkit-scrollbar-track{background:#1a1f2e}
+    .test-list::-webkit-scrollbar-thumb{background:#4a5568;border-radius:2px}
+    .test-item{padding:8px 10px;border-bottom:1px solid #1e2535;display:flex;align-items:flex-start;gap:8px}
+    .test-item:last-child{border-bottom:none}
+    .test-item:hover{background:#1e2535}
+    .test-icon{font-size:12px;margin-top:1px;flex-shrink:0}
+    .test-name{font-size:11px;color:#e2e8f0;line-height:1.4;word-break:break-word}
+    .test-meta{font-size:10px;color:#718096;margin-top:2px}
+    .test-error{font-size:10px;color:#fc8181;margin-top:4px;line-height:1.4;word-break:break-word;background:#1e1520;padding:4px 6px;border-radius:4px;border-left:2px solid #fc8181}
+
+    /* ── Healing ── */
+    .heal-item{padding:8px 10px;border-bottom:1px solid #1e2535;display:flex;align-items:center;gap:8px}
+    .heal-item:last-child{border-bottom:none}
+    .heal-item:hover{background:#1e2535}
+    .confidence-bar{width:60px;height:6px;background:#2d3748;border-radius:3px;overflow:hidden;flex-shrink:0}
+    .confidence-fill{height:6px;border-radius:3px}
+
+    /* ── Comparison ── */
+    .comp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+    .comp-card{background:#0f1117;border:1px solid #2d3748;border-radius:8px;padding:14px;text-align:center}
+    .comp-card.highlight{border-color:#4299e1;background:#1a2744}
+    .comp-name{font-size:10px;color:#718096;margin-bottom:8px}
+    .comp-layers{font-size:28px;font-weight:700;margin-bottom:4px}
+    .comp-cost{font-size:10px}
+
+    /* ── Misc ── */
+    .empty{color:#4a5568;font-size:12px;text-align:center;padding:24px}
+    .error-box{background:#1e1520;border:1px solid #3d1515;border-radius:8px;padding:20px;text-align:center;color:#fc8181}
+    .loading{text-align:center;padding:60px;color:#718096;font-size:14px}
+    .tab-bar{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid #2d3748;padding-bottom:0}
+    .tab{padding:8px 14px;font-size:11px;font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;color:#718096;border:1px solid transparent;border-bottom:none;margin-bottom:-1px}
+    .tab.active{background:#1a1f2e;color:#e2e8f0;border-color:#2d3748}
+    .tab:hover:not(.active){color:#a0aec0}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div>
+    <h1>🤖 AI Test Automation — Live Dashboard</h1>
+    <p id="last-updated">Loading...</p>
+  </div>
+  <div class="header-right">
+    <div class="live-dot"></div>
+    <span class="live-text">LIVE</span>
+    <span id="role-badge" class="role-badge">...</span>
+    <button class="refresh-btn" onclick="loadAll()">🔄 Refresh</button>
+    <div id="status-badge" class="status-badge">...</div>
+  </div>
+</div>
+
+<!-- ── Main Content ── -->
+<div class="container" id="content">
+  <div class="loading">⏳ Loading test results...</div>
+</div>
+
+<script>
+let statsData = null;
+let testsData = null;
+let charts = {};
+
+// ── Destroy old charts before redraw ──
+function destroyCharts() {
+  Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  charts = {};
+}
+
+// ── Load all data ──
+async function loadAll() {
+  try {
+    const token = new URLSearchParams(window.location.search).get('token') || '';
+    const url = token ? '/api/stats?token=' + token : '/api/stats';
+    const testsUrl = token ? '/api/tests?token=' + token : '/api/tests';
+
+    const [statsRes, testsRes] = await Promise.all([
+      fetch(url),
+      fetch(testsUrl).catch(() => null),
+    ]);
+
+    statsData = await statsRes.json();
+    testsData = testsRes ? await testsRes.json().catch(() => null) : null;
+
+    if (statsData.error) {
+      document.getElementById('content').innerHTML =
+        '<div class="error-box">⚠️ ' + statsData.error + '<br><br><small>Run: npm test</small></div>';
+      return;
+    }
+
+    renderDashboard();
+  } catch(e) {
+    document.getElementById('content').innerHTML =
+      '<div class="error-box">❌ Failed to load: ' + e.message + '</div>';
+  }
+}
+
+// ── Render full dashboard ──
+function renderDashboard() {
+  const s = statsData.summary;
+  const role = statsData.role ?? 'public';
+  const passColor = s.passRate === 100 ? '#48bb78' : s.passRate >= 90 ? '#ecc94b' : '#fc8181';
+
+  // Header
+  const roleLabels = { admin: '👑 Admin', qa: '🔬 QA Engineer', manager: '📈 Manager', public: '👁 Public' };
+  const rb = document.getElementById('role-badge');
+  rb.textContent = roleLabels[role] || '👁 Public';
+  rb.className = 'role-badge role-' + role;
+
+  document.getElementById('last-updated').textContent =
+    '📅 Last run: ' + new Date(s.startTime).toLocaleString() +
+    '  ⏱ Duration: ' + s.duration + 's  🔄 Updated: ' + new Date(statsData.lastUpdated).toLocaleTimeString();
+
+  const sb = document.getElementById('status-badge');
+  sb.textContent = s.status === 'PASSED' ? '✅ ALL PASSED' : '❌ ' + s.failed + ' FAILED';
+  sb.className = 'status-badge ' + (s.status === 'PASSED' ? 'pass' : 'fail');
+
+  // Public view
+  if (role === 'public') { renderPublic(s, passColor); return; }
+
+  // Manager view
+  if (role === 'manager') { renderManager(s, passColor); return; }
+
+  // Admin / QA view
+  renderFull(s, role, passColor);
+}
+
+// ── Public view ──
+function renderPublic(s, passColor) {
+  document.getElementById('content').innerHTML = `
+    <div style="text-align:center;padding:80px 20px">
+      <div style="font-size:90px;margin-bottom:16px">${s.passRate === 100 ? '✅' : s.passRate >= 90 ? '⚠️' : '❌'}</div>
+      <div style="font-size:56px;font-weight:700;color:${passColor}">${s.passRate}%</div>
+      <div style="color:#718096;margin-top:12px;font-size:18px">${s.passed} of ${s.total} tests passing</div>
+      <div style="color:#4a5568;margin-top:8px;font-size:13px">Login with token for detailed view</div>
+    </div>`;
+}
+
+// ── Manager view ──
+function renderManager(s, passColor) {
+  const projRows = Object.entries(statsData.byProject || {}).map(([name, p]) => {
+    const rate = p.total > 0 ? Math.round((p.passed / p.total) * 100) : 0;
+    const c = rate === 100 ? '#48bb78' : rate >= 80 ? '#ecc94b' : '#fc8181';
+    return `<tr>
+      <td><span class="badge badge-blue">${name}</span></td>
+      <td class="g">${p.passed}</td>
+      <td class="${p.failed > 0 ? 'r' : 'g'}">${p.failed}</td>
+      <td class="y">${p.skipped}</td>
+      <td>${p.total}</td>
+      <td><span style="color:${c};font-weight:700">${rate}%</span>
+        <div class="bar-bg"><div class="bar" style="width:${rate}%;background:${c}"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="grid4">
+      <div class="card"><div class="icon">📊</div><div class="lbl">Pass Rate</div><div class="val" style="color:${passColor}">${s.passRate}%</div><div class="sub">${s.passed} of ${s.total} tests</div></div>
+      <div class="card"><div class="icon">✅</div><div class="lbl">Passed</div><div class="val g">${s.passed}</div><div class="sub">tests successful</div></div>
+      <div class="card"><div class="icon">❌</div><div class="lbl">Failed</div><div class="val ${s.failed===0?'g':'r'}">${s.failed}</div><div class="sub">needs attention</div></div>
+      <div class="card"><div class="icon">⏱</div><div class="lbl">Duration</div><div class="val b">${s.duration}s</div><div class="sub">total run time</div></div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span>🗂️</span> Results by Project</div>
+      <table><tr><th>Project</th><th>✅ Passed</th><th>❌ Failed</th><th>⏭ Skipped</th><th>Total</th><th>Pass Rate</th></tr>${projRows}</table>
+    </div>
+    <div class="section" style="text-align:center;padding:30px">
+      <div style="font-size:64px;margin-bottom:12px">${s.passRate === 100 ? '🎉' : s.passRate >= 90 ? '⚠️' : '🚨'}</div>
+      <div style="font-size:28px;font-weight:700;color:${passColor}">${s.status}</div>
+      <div style="color:#718096;margin-top:8px">${s.passed}/${s.total} tests passing</div>
+    </div>`;
+
+  // Draw pie chart
+  setTimeout(() => drawManagerChart(s), 100);
+}
+</script>
+
+<script>
+// ── Draw manager pie chart ──
+function drawManagerChart(s) {
+  const canvas = document.getElementById('mgr-chart');
+  if (!canvas) return;
+  charts['mgr'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Passed', 'Failed', 'Skipped'],
+      datasets: [{ data: [s.passed, s.failed, s.skipped], backgroundColor: ['#48bb78','#fc8181','#718096'], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#a0aec0', font: { size: 11 } } } } }
+  });
+}
+
+// ── Full Admin/QA view ──
+function renderFull(s, role, passColor) {
+  destroyCharts();
+
+  const projEntries = Object.entries(statsData.byProject || {});
+  const projRows = projEntries.map(([name, p]) => {
+    const rate = p.total > 0 ? Math.round((p.passed / p.total) * 100) : 0;
+    const c = rate === 100 ? '#48bb78' : rate >= 80 ? '#ecc94b' : '#fc8181';
+    return `<tr>
+      <td><span class="badge badge-blue">${name}</span></td>
+      <td class="g">${p.passed}</td>
+      <td class="${p.failed > 0 ? 'r' : 'g'}">${p.failed}</td>
+      <td class="y">${p.skipped}</td>
+      <td><b>${p.total}</b></td>
+      <td><span style="color:${c};font-weight:700">${rate}%</span>
+        <div class="bar-bg"><div class="bar" style="width:${rate}%;background:${c}"></div></div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Failed tests
+  const failRows = statsData.failedTests.length === 0
+    ? '<div class="empty">✅ No failures — all tests passed!</div>'
+    : statsData.failedTests.map(t => `
+        <div class="test-item">
+          <div class="test-icon">❌</div>
+          <div style="flex:1">
+            <div class="test-name r">${t.title}</div>
+            <div class="test-meta"><span class="badge badge-blue">${t.project || '—'}</span> &nbsp; ⏱ ${t.duration}s</div>
+            ${t.error ? `<div class="test-error">🔍 ${t.error}</div>` : ''}
+          </div>
+        </div>`).join('');
+
+  // Passed tests
+  const passedList = testsData && testsData.passed
+    ? testsData.passed.map(t => `
+        <div class="test-item">
+          <div class="test-icon">✅</div>
+          <div style="flex:1">
+            <div class="test-name">${t.title}</div>
+            <div class="test-meta"><span class="badge badge-blue">${t.project || '—'}</span> &nbsp; ⏱ ${t.duration}s</div>
+          </div>
+        </div>`).join('')
+    : '<div class="empty">No data</div>';
+
+  // Skipped tests
+  const skippedList = testsData && testsData.skipped
+    ? testsData.skipped.map(t => `
+        <div class="test-item">
+          <div class="test-icon">⏭</div>
+          <div style="flex:1">
+            <div class="test-name y">${t.title}</div>
+            <div class="test-meta"><span class="badge badge-blue">${t.project || '—'}</span></div>
+          </div>
+        </div>`).join('')
+    : '<div class="empty">No skipped tests</div>';
+
+  // Healing rows
+  const healRows = statsData.healing.recentHealList.length === 0
+    ? '<div class="empty">✅ No heals today — all locators stable</div>'
+    : statsData.healing.recentHealList.map(h => {
+        const conf = h.confidence || 0;
+        const confColor = conf >= 80 ? '#48bb78' : conf >= 60 ? '#ecc94b' : '#fc8181';
+        return `<div class="heal-item">
+          <div style="flex:1">
+            <div style="font-size:11px;color:#e2e8f0">${h.label}</div>
+            <div style="font-size:10px;color:#718096;margin-top:2px">
+              <span class="badge badge-blue">${h.action || '—'}</span>
+              &nbsp; Healed to: <span class="g" style="font-size:10px">${h.newLocator || '—'}</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px;font-weight:700;color:${confColor}">${conf}%</div>
+            <div class="confidence-bar"><div class="confidence-fill" style="width:${conf}%;background:${confColor}"></div></div>
+            <div style="font-size:9px;color:#718096;margin-top:2px">confidence</div>
+          </div>
+        </div>`;
+      }).join('');
+
+  // Top fragile
+  const fragileRows = statsData.healing.topFragile.length === 0
+    ? '<div class="empty">No fragile locators</div>'
+    : statsData.healing.topFragile.map((f, i) => `
+        <div class="test-item">
+          <div class="test-icon">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🔸'}</div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:#e2e8f0">${f.label}</div>
+            <div style="font-size:10px;color:#718096">healed ${f.count} times</div>
+          </div>
+          <span class="badge badge-yellow">${f.count}x</span>
+        </div>`).join('');
+
+  // Slowest tests
+  const slowRows = statsData.slowest.length === 0
+    ? '<div class="empty">No data</div>'
+    : statsData.slowest.map(t => {
+        const dur = parseFloat(t.duration);
+        const c = dur > 30 ? 'r' : dur > 15 ? 'y' : 'g';
+        return `<div class="test-item">
+          <div class="test-icon">🐢</div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:#e2e8f0">${t.title}</div>
+            <div style="font-size:10px;color:#718096"><span class="badge badge-blue">${t.project || '—'}</span></div>
+          </div>
+          <span class="badge ${c === 'r' ? 'badge-red' : c === 'y' ? 'badge-yellow' : 'badge-green'}">${t.duration}s</span>
+        </div>`;
+      }).join('');
+
+  document.getElementById('content').innerHTML = `
+    <!-- ── Summary Cards ── -->
+    <div class="grid4">
+      <div class="card"><div class="icon">📊</div><div class="lbl">Overall Pass Rate</div><div class="val" style="color:${passColor}">${s.passRate}%</div><div class="sub">${s.passed} of ${s.total} tests passed</div></div>
+      <div class="card"><div class="icon">✅</div><div class="lbl">Tests Passed</div><div class="val g">${s.passed}</div><div class="sub">successful executions</div></div>
+      <div class="card"><div class="icon">❌</div><div class="lbl">Tests Failed</div><div class="val ${s.failed===0?'g':'r'}">${s.failed}</div><div class="sub">${s.skipped} skipped · ${s.flaky} flaky</div></div>
+      <div class="card"><div class="icon">🧠</div><div class="lbl">Self-Heals</div><div class="val b">${statsData.healing.healCount}</div><div class="sub">${statsData.healing.recentHeals} today · ${statsData.healing.successRate}% success</div></div>
+    </div>
+
+    <!-- ── Charts Row ── -->
+    <div class="grid3">
+      <div class="section">
+        <div class="section-title"><span>🍩</span> Pass / Fail / Skip Distribution</div>
+        <div class="chart-container"><canvas id="donut-chart"></canvas></div>
+      </div>
+      <div class="section">
+        <div class="section-title"><span>📊</span> Results by Project</div>
+        <div class="chart-container"><canvas id="bar-chart"></canvas></div>
+      </div>
+      <div class="section">
+        <div class="section-title"><span>🧠</span> Healing Success Rate</div>
+        <div class="chart-container"><canvas id="heal-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── Project Table ── -->
+    <div class="section">
+      <div class="section-title"><span>🗂️</span> Detailed Results by Project</div>
+      <table>
+        <tr><th>Project</th><th>✅ Passed</th><th>❌ Failed</th><th>⏭ Skipped</th><th>Total</th><th>Pass Rate</th></tr>
+        ${projRows}
+      </table>
+    </div>
+
+    <!-- ── Test Results Tabs ── -->
+    <div class="section">
+      <div class="section-title"><span>🧪</span> Test Results</div>
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('failed')">❌ Failed (${s.failed})</div>
+        <div class="tab" onclick="switchTab('passed')">✅ Passed (${s.passed})</div>
+        <div class="tab" onclick="switchTab('skipped')">⏭ Skipped (${s.skipped})</div>
+      </div>
+      <div id="tab-failed" class="tab-content active">
+        <div class="test-list">${failRows}</div>
+      </div>
+      <div id="tab-passed" class="tab-content">
+        <div class="test-list">${passedList}</div>
+      </div>
+      <div id="tab-skipped" class="tab-content">
+        <div class="test-list">${skippedList}</div>
+      </div>
+    </div>
+
+    <!-- ── Healing + Slowest ── -->
+    <div class="grid2">
+      <div class="section">
+        <div class="section-title"><span>🧠</span> Self-Healing Activity Today</div>
+        <div class="test-list">${healRows}</div>
+      </div>
+      <div class="section">
+        <div class="section-title"><span>🔸</span> Most Fragile Locators</div>
+        <div class="test-list">${fragileRows}</div>
+      </div>
+    </div>
+
+    <!-- ── Slowest Tests ── -->
+    <div class="section">
+      <div class="section-title"><span>🐢</span> Slowest Tests</div>
+      <div class="test-list">${slowRows}</div>
+    </div>
+
+    <!-- ── Framework Comparison ── -->
+    <div class="section">
+      <div class="section-title"><span>🏆</span> Framework Comparison — Healing Layers</div>
+      <div class="comp-grid">
+        <div class="comp-card highlight">
+          <div class="comp-name">🤖 Your Framework</div>
+          <div class="comp-layers g">9</div>
+          <div class="comp-cost g">Free & Open Source</div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">Healenium</div>
+          <div class="comp-layers y">1</div>
+          <div class="comp-cost g">Free</div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">Testim</div>
+          <div class="comp-layers y">3</div>
+          <div class="comp-cost r">$$$$</div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">Mabl</div>
+          <div class="comp-layers y">3</div>
+          <div class="comp-cost r">$$$$</div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">Playwright</div>
+          <div class="comp-layers r">0</div>
+          <div class="comp-cost g">Free</div>
+        </div>
+      </div>
+    </div>`;
+
+  // Draw charts after DOM is ready
+  setTimeout(() => {
+    drawDonutChart(s);
+    drawBarChart();
+    drawHealChart();
+  }, 100);
+}
+
+// ── Tab switching ──
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+<script>
+// ── Donut Chart — Pass/Fail/Skip ──
+function drawDonutChart(s) {
+  const canvas = document.getElementById('donut-chart');
+  if (!canvas) return;
+  charts['donut'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['✅ Passed', '❌ Failed', '⏭ Skipped', '⚠️ Flaky'],
+      datasets: [{
+        data: [s.passed, s.failed, s.skipped, s.flaky],
+        backgroundColor: ['#48bb78', '#fc8181', '#718096', '#ecc94b'],
+        borderWidth: 2,
+        borderColor: '#1a1f2e',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#a0aec0', font: { size: 11 }, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? Math.round((ctx.parsed / total) * 100) : 0;
+              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── Bar Chart — Results by Project ──
+function drawBarChart() {
+  const canvas = document.getElementById('bar-chart');
+  if (!canvas) return;
+  const projects = Object.entries(statsData.byProject || {});
+  if (projects.length === 0) return;
+
+  charts['bar'] = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: projects.map(([name]) => name.length > 12 ? name.slice(0, 12) + '…' : name),
+      datasets: [
+        { label: '✅ Passed',  data: projects.map(([,p]) => p.passed),  backgroundColor: '#48bb78', borderRadius: 4 },
+        { label: '❌ Failed',  data: projects.map(([,p]) => p.failed),  backgroundColor: '#fc8181', borderRadius: 4 },
+        { label: '⏭ Skipped', data: projects.map(([,p]) => p.skipped), backgroundColor: '#718096', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { stacked: true, ticks: { color: '#718096', font: { size: 9 } }, grid: { color: '#2d3748' } },
+        y: { stacked: true, ticks: { color: '#718096', font: { size: 10 } }, grid: { color: '#2d3748' } }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#a0aec0', font: { size: 10 }, padding: 10 } }
+      }
+    }
+  });
+}
+
+// ── Gauge Chart — Healing Success Rate ──
+function drawHealChart() {
+  const canvas = document.getElementById('heal-chart');
+  if (!canvas) return;
+  const h = statsData.healing;
+  const successPct = h.successRate || 0;
+  const failPct = 100 - successPct;
+
+  charts['heal'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['✅ Healed Successfully', '❌ Heal Failed'],
+      datasets: [{
+        data: [successPct, failPct],
+        backgroundColor: ['#48bb78', '#3d1515'],
+        borderWidth: 2,
+        borderColor: '#1a1f2e',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#a0aec0', font: { size: 11 }, padding: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` } }
+      }
+    }
+  });
+
+  // Draw center text
+  const centerText = {
+    id: 'centerText',
+    afterDraw(chart) {
+      const { ctx, chartArea: { top, bottom, left, right } } = chart;
+      const cx = (left + right) / 2;
+      const cy = (top + bottom) / 2;
+      ctx.save();
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = '#48bb78';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(successPct + '%', cx, cy - 8);
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#718096';
+      ctx.fillText('success rate', cx, cy + 12);
+      ctx.restore();
+    }
+  };
+  charts['heal'].options.plugins.centerText = centerText;
+}
+
+// ── Start ──
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+</body>
+</html>
+
+<script>
+// ── Load history and render trend ──
+async function loadHistory() {
+  try {
+    const token = new URLSearchParams(window.location.search).get('token') || '';
+    const url = token ? '/api/history?token=' + token : '/api/history';
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error || !data.runs || data.runs.length === 0) return;
+    renderHistory(data);
+  } catch(e) {
+    console.warn('History load failed:', e.message);
+  }
+}
+
+function renderHistory(data) {
+  const { runs, comparison } = data;
+  if (!runs || runs.length === 0) return;
+
+  // Build comparison HTML
+  let compHtml = '';
+  if (comparison) {
+    const diff = comparison.passRateDiff;
+    const diffColor = diff > 0 ? '#48bb78' : diff < 0 ? '#fc8181' : '#718096';
+    const diffIcon = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+
+    const fixedHtml = comparison.fixed.length === 0
+      ? '<div class="empty">No newly fixed tests</div>'
+      : comparison.fixed.map(t => `<div class="test-item"><div class="test-icon">🔧</div><div class="test-name g">${t}</div></div>`).join('');
+
+    const newFailHtml = comparison.newFailures.length === 0
+      ? '<div class="empty">✅ No new failures!</div>'
+      : comparison.newFailures.map(t => `<div class="test-item"><div class="test-icon">🆕</div><div class="test-name r">${t}</div></div>`).join('');
+
+    compHtml = `
+      <div class="section" style="margin-top:16px">
+        <div class="section-title"><span>🔄</span> Comparison: Current vs Previous Run</div>
+        <div style="text-align:center;padding:12px;margin-bottom:14px;background:#0f1117;border-radius:8px">
+          <span style="font-size:24px">${diffIcon}</span>
+          <span style="font-size:20px;font-weight:700;color:${diffColor};margin-left:8px">
+            ${diff > 0 ? '+' : ''}${diff}% pass rate change
+          </span>
+        </div>
+        <div class="grid2">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:#48bb78;margin-bottom:8px">🔧 Fixed Tests (was failing, now passing)</div>
+            <div class="test-list">${fixedHtml}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:#fc8181;margin-bottom:8px">🆕 New Failures (was passing, now failing)</div>
+            <div class="test-list">${newFailHtml}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Build history table
+  const historyRows = [...runs].reverse().map((r, i) => {
+    const c = r.passRate === 100 ? '#48bb78' : r.passRate >= 90 ? '#ecc94b' : '#fc8181';
+    const isLatest = i === 0;
+    return `<tr ${isLatest ? 'style="background:#1e2535"' : ''}>
+      <td>${isLatest ? '<span class="badge badge-purple">Latest</span>' : ''} ${new Date(r.timestamp).toLocaleString()}</td>
+      <td class="g">${r.passed}</td>
+      <td class="${r.failed > 0 ? 'r' : 'g'}">${r.failed}</td>
+      <td class="y">${r.skipped}</td>
+      <td>${r.total}</td>
+      <td><span style="color:${c};font-weight:700">${r.passRate}%</span>
+        <div class="bar-bg"><div class="bar" style="width:${r.passRate}%;background:${c}"></div></div>
+      </td>
+      <td><span class="badge ${r.status === 'PASSED' ? 'badge-green' : 'badge-red'}">${r.status}</span></td>
+      <td class="b">${(r.duration / 1000).toFixed(0)}s</td>
+    </tr>`;
+  }).join('');
+
+  const historySection = `
+    <div class="section" style="margin-top:16px" id="history-section">
+      <div class="section-title"><span>📈</span> Pass Rate Trend (Last ${runs.length} Runs)</div>
+      <div class="chart-container" style="height:200px;margin-bottom:16px">
+        <canvas id="trend-chart"></canvas>
+      </div>
+      <table>
+        <tr>
+          <th>Run Time</th>
+          <th>✅ Passed</th>
+          <th>❌ Failed</th>
+          <th>⏭ Skipped</th>
+          <th>Total</th>
+          <th>Pass Rate</th>
+          <th>Status</th>
+          <th>Duration</th>
+        </tr>
+        ${historyRows}
+      </table>
+    </div>
+    ${compHtml}`;
+
+  // Append to content
+  const content = document.getElementById('content');
+  if (content) {
+    const existing = document.getElementById('history-section');
+    if (existing) existing.parentElement.removeChild(existing);
+    content.insertAdjacentHTML('beforeend', historySection);
+    setTimeout(() => drawTrendChart(runs), 100);
+  }
+}
+
+// ── Trend Line Chart ──
+function drawTrendChart(runs) {
+  const canvas = document.getElementById('trend-chart');
+  if (!canvas) return;
+  if (charts['trend']) { try { charts['trend'].destroy(); } catch(e){} }
+
+  const labels = runs.map(r => new Date(r.timestamp).toLocaleDateString() + ' ' + new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+  const passRates = runs.map(r => r.passRate);
+  const passed = runs.map(r => r.passed);
+  const failed = runs.map(r => r.failed);
+
+  charts['trend'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '📊 Pass Rate %',
+          data: passRates,
+          borderColor: '#48bb78',
+          backgroundColor: 'rgba(72,187,120,0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: passRates.map(r => r === 100 ? '#48bb78' : r >= 90 ? '#ecc94b' : '#fc8181'),
+          pointRadius: 5,
+          yAxisID: 'y',
+        },
+        {
+          label: '✅ Passed',
+          data: passed,
+          borderColor: '#63b3ed',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0.4,
+          pointRadius: 3,
+          yAxisID: 'y1',
+        },
+        {
+          label: '❌ Failed',
+          data: failed,
+          borderColor: '#fc8181',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0.4,
+          pointRadius: 3,
+          yAxisID: 'y1',
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { ticks: { color: '#718096', font: { size: 9 }, maxRotation: 45 }, grid: { color: '#2d3748' } },
+        y: {
+          type: 'linear', position: 'left',
+          min: 0, max: 100,
+          ticks: { color: '#48bb78', font: { size: 10 }, callback: v => v + '%' },
+          grid: { color: '#2d3748' },
+          title: { display: true, text: 'Pass Rate %', color: '#48bb78', font: { size: 10 } }
+        },
+        y1: {
+          type: 'linear', position: 'right',
+          min: 0,
+          ticks: { color: '#718096', font: { size: 10 } },
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: 'Test Count', color: '#718096', font: { size: 10 } }
+        }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#a0aec0', font: { size: 10 }, padding: 10 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 0) return ` Pass Rate: ${ctx.parsed.y}%`;
+              if (ctx.datasetIndex === 1) return ` Passed: ${ctx.parsed.y}`;
+              return ` Failed: ${ctx.parsed.y}`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ── Override loadAll to also load history ──
+const _origLoadAll = loadAll;
+async function loadAll() {
+  await _origLoadAll();
+  await loadHistory();
+}
+
+// Restart auto-refresh with history
+loadAll();
+setInterval(loadAll, 30000);
+</script>

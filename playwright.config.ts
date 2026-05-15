@@ -19,6 +19,7 @@ export default defineConfig({
 
   reporter: [
     ['./src/utils/FrameworkReporter.ts'],
+    ['./src/utils/HistoryReporter.ts'],
     ['list'],
     ['html', { outputFolder: 'test-results/html-report', open: 'never' }],
     ['json', { outputFile: 'test-results/report.json' }],
@@ -29,9 +30,7 @@ export default defineConfig({
     headless: !isHeaded,
     viewport: { width: 1280, height: 720 },
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    // Trace retained on failure — enables one-click debugging via:
-    // npx playwright show-trace test-results/artifacts/.../trace.zip
+    video: { mode: 'retain-on-failure', size: { width: 1280, height: 720 } },
     trace: 'retain-on-failure',
     actionTimeout: 10_000,
     navigationTimeout: 60_000,

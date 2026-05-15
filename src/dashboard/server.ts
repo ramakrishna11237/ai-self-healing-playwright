@@ -279,13 +279,17 @@ function flattenTests(suites: SuiteEntry[], titlePath: string[] = []): TestResul
       for (const spec of suite.specs) {
         if (!spec.tests) continue;
         for (const test of spec.tests) {
+          // status is in results[0].status not test.status
+          const status = (test as any).results?.[0]?.status ?? test.status ?? 'skipped';
+          const duration = (test as any).results?.[0]?.duration ?? test.duration ?? 0;
+          const errors = (test as any).results?.[0]?.errors ?? test.errors ?? [];
           results.push({
             title: [...current, spec.title].join(' › '),
-            status: test.status,
-            duration: test.duration,
+            status,
+            duration,
             retry: test.retry,
             projectName: test.projectName,
-            errors: test.errors,
+            errors,
           });
         }
       }
@@ -361,10 +365,10 @@ app.get('/api/stats', (req: Request, res: Response) => {
   const failedTests = allFailed
     .slice((page - 1) * pageSize, page * pageSize)
     .map((t) => ({
-      title: t.title.slice(-60),
+      title: t.title,
       project: t.projectName,
       duration: (t.duration / 1000).toFixed(1),
-      error: t.errors?.[0]?.message?.split('\n')[0]?.slice(0, 150) ?? null,
+      error: t.errors?.[0]?.message?.split('\n').slice(0, 5).join(' | ')?.slice(0, 500) ?? null,
     }));
 
   const slowest = tests
@@ -417,15 +421,87 @@ app.get('/', (_req, res) => {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok', port: PORT }));
 
+// ── History API ─────────────────────────────────────────────────────
+app.get('/api/history', (req: Request, res: Response) => {
+  const role = getRole(req);
+  if (role === 'public') return res.status(403).json({ error: 'Access denied' });
+
+  const historyDir = path.join(ROOT, 'test-results', 'history');
+  if (!fs.existsSync(historyDir)) return res.json({ runs: [] });
+
+  try {
+    const files = fs.readdirSync(historyDir)
+      .filter(f => f.startsWith('run-') && f.endsWith('.json'))
+      .sort()
+      .slice(-20); // last 20 runs
+
+    const runs = files.map(f => {
+      try {
+        const raw = JSON.parse(fs.readFileSync(path.join(historyDir, f), 'utf8'));
+        return {
+          runId    : raw.runId,
+          timestamp: raw.timestamp,
+          passed   : raw.passed,
+          failed   : raw.failed,
+          skipped  : raw.skipped,
+          total    : raw.total,
+          passRate : raw.passRate,
+          status   : raw.status,
+          duration : raw.duration,
+        };
+      } catch { return null; }
+    }).filter(Boolean);
+
+    // Compare last 2 runs
+    let comparison = null;
+    if (runs.length >= 2) {
+      const curr = JSON.parse(fs.readFileSync(path.join(historyDir, files[files.length - 1]), 'utf8'));
+      const prev = JSON.parse(fs.readFileSync(path.join(historyDir, files[files.length - 2]), 'utf8'));
+
+      const currTitles = new Set(curr.tests.filter((t: any) => t.status === 'passed').map((t: any) => t.title));
+      const prevTitles = new Set(prev.tests.filter((t: any) => t.status === 'passed').map((t: any) => t.title));
+      const currFailed = new Set(curr.tests.filter((t: any) => t.status === 'failed').map((t: any) => t.title));
+      const prevFailed = new Set(prev.tests.filter((t: any) => t.status === 'failed').map((t: any) => t.title));
+
+      comparison = {
+        fixed      : [...currTitles].filter(t => prevFailed.has(t)).slice(0, 10),
+        newFailures: [...currFailed].filter(t => prevTitles.has(t)).slice(0, 10),
+        passRateDiff: curr.passRate - prev.passRate,
+      };
+    }
+
+    return res.json({ runs, comparison });
+  } catch (e) {
+    return res.json({ runs: [], error: String(e).slice(0, 100) });
+  }
+});
+
 // ── Inline dashboard HTML ─────────────────────────────────────────────────────
 
+// Also expose all tests via API for passed/failed lists
+app.get('/api/tests', (req: Request, res: Response) => {
+  const role = getRole(req);
+  if (role === 'public' || role === 'manager') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  const report = loadReport();
+  if (!report) return res.json({ passed: [], failed: [], skipped: [] });
+  const tests = flattenTests(report.suites ?? []);
+  return res.json({
+    passed : tests.filter(t => t.status === 'passed').map(t => ({ title: t.title, project: t.projectName, duration: (t.duration/1000).toFixed(1) })),
+    failed : tests.filter(t => t.status === 'failed').map(t => ({ title: t.title, project: t.projectName, duration: (t.duration/1000).toFixed(1), error: (t.errors as any)?.[0]?.message?.slice(0,300) ?? null })),
+    skipped: tests.filter(t => t.status === 'skipped').map(t => ({ title: t.title, project: t.projectName })),
+  });
+});
+
 function getDashboardHTML(): string {
-  return `<!DOCTYPE html>
+  return `<!DOCTYPE html><!-- v2 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🤖 AI Automation Framework — Live Dashboard</title>
+  <title>🤖 Automation Framework — Live Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh}
@@ -444,7 +520,7 @@ function getDashboardHTML(): string {
     .live-dot{width:8px;height:8px;border-radius:50%;background:#48bb78;animation:pulse 2s infinite}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
     .live-text{font-size:11px;color:#48bb78}
-    .container{max-width:1300px;margin:0 auto;padding:20px 28px}
+    .container{max-width:1400px;margin:0 auto;padding:20px 28px}
     .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
     .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
@@ -456,7 +532,7 @@ function getDashboardHTML(): string {
     .section h2{font-size:12px;font-weight:600;color:#a0aec0;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
     table{width:100%;border-collapse:collapse;font-size:12px}
     th{text-align:left;padding:7px 10px;color:#718096;font-weight:500;border-bottom:1px solid #2d3748;font-size:10px;text-transform:uppercase}
-    td{padding:8px 10px;border-bottom:1px solid #1e2535}
+    td{padding:8px 10px;border-bottom:1px solid #1e2535;vertical-align:top}
     tr:last-child td{border-bottom:none}
     tr:hover td{background:#1e2535}
     .g{color:#48bb78}.y{color:#ecc94b}.r{color:#fc8181}.b{color:#63b3ed}
@@ -464,16 +540,11 @@ function getDashboardHTML(): string {
     .badge-b{background:#1a365d;color:#63b3ed}
     .badge-g{background:#1c4532;color:#48bb78}
     .badge-r{background:#3d1515;color:#fc8181}
-    .bar-bg{background:#2d3748;border-radius:3px;height:5px;margin-top:4px}
-    .bar{border-radius:3px;height:5px}
-    .donut{position:relative;width:110px;height:110px;margin:0 auto 14px}
-    .donut svg{transform:rotate(-90deg)}
-    .donut-c{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-    .donut-c .pct{font-size:22px;font-weight:700}
-    .donut-c .lbl{font-size:9px;color:#718096}
-    .legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:8px}
-    .legend-item{display:flex;align-items:center;gap:5px;font-size:11px}
-    .legend-dot{width:8px;height:8px;border-radius:50%}
+    .badge-y{background:#3d3000;color:#ecc94b}
+    .bar-bg{background:#2d3748;border-radius:3px;height:6px;margin-top:4px}
+    .bar{border-radius:3px;height:6px;transition:width 0.5s}
+    .chart-wrap{position:relative;height:220px;margin-bottom:10px}
+    .chart-wrap-sm{position:relative;height:180px}
     .empty{color:#4a5568;font-size:12px;text-align:center;padding:20px}
     .comp{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
     .comp-card{background:#0f1117;border:1px solid #2d3748;border-radius:8px;padding:12px;text-align:center}
@@ -485,6 +556,12 @@ function getDashboardHTML(): string {
     .refresh-btn:hover{background:#4a5568}
     .error-box{background:#1e1520;border:1px solid #3d1515;border-radius:8px;padding:16px;text-align:center;color:#fc8181}
     .loading{text-align:center;padding:40px;color:#718096}
+    .error-msg{color:#fc8181;font-size:10px;word-break:break-word;max-width:350px;line-height:1.4}
+    .test-title{font-size:11px;word-break:break-word;max-width:280px;line-height:1.4}
+    .passed-list{max-height:300px;overflow-y:auto}
+    .passed-list::-webkit-scrollbar{width:4px}
+    .passed-list::-webkit-scrollbar-track{background:#1a1f2e}
+    .passed-list::-webkit-scrollbar-thumb{background:#4a5568;border-radius:2px}
   </style>
 </head>
 <body>
@@ -592,10 +669,12 @@ async function loadData() {
     const failRows = data.failedTests.length === 0
       ? '<tr><td colspan="4" class="empty">✅ No failures!</td></tr>'
       : data.failedTests.map(t =>
-          '<tr><td class="r" style="font-size:11px">' + t.title + '</td>' +
-          '<td><span class="badge badge-b">' + t.project + '</span></td>' +
+          '<tr>' +
+          '<td class="r" style="font-size:11px;word-break:break-word;max-width:300px">' + t.title + '</td>' +
+          '<td><span class="badge badge-b">' + (t.project || '—') + '</span></td>' +
           '<td class="y">' + t.duration + 's</td>' +
-          '<td style="color:#718096;font-size:10px">' + (t.error || '—') + '</td></tr>'
+          '<td style="color:#fc8181;font-size:10px;word-break:break-word;max-width:400px">' + (t.error || '—') + '</td>' +
+          '</tr>'
         ).join('');
 
     // Slowest rows

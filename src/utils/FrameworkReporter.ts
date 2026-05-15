@@ -2,7 +2,6 @@ import type {
   Reporter,
   TestCase,
   TestResult,
-  TestStep,
   FullConfig,
   Suite,
   FullResult,

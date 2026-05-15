@@ -2,7 +2,7 @@
   "name": "ai-automation-framework",
   "version": "2.0.0",
   "scripts": {
-    "dashboard:server": "ts-node src/dashboard/server.ts",
+    "dashboard:server": "ts-node -r dotenv/config src/dashboard/server.ts",
     "dashboard:final": "ts-node src/utils/FinalDashboard.ts",
     "dashboard": "ts-node src/utils/HealthDashboard.ts",
     "docker:up": "docker-compose up -d",

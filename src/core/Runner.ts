@@ -435,10 +435,30 @@ export async function runStepDetailed(page: Page, step: Step): Promise<StepResul
     }
 
     // ── Layer 4: DOM capture + self-heal ────────────────────────────────────
+    // If page is closed — try to recover it before giving up
     if (!isPageAlive(page)) {
+      Logger.warn(`Layer 4: page closed — attempting recovery for "${step.label}"`);
+      try {
+        // Try to get another open page from the context
+        const pages = page.context().pages();
+        const alivePage = pages.find(p => !p.isClosed());
+        if (alivePage) {
+          Logger.info(`Layer 4: recovered using another open page`);
+          // Continue with alive page for DOM capture
+          const before = await captureDOM(alivePage, 'before', originalLocator(step) || undefined).catch(() => '');
+          const healedLocator = await selfHeal(alivePage, step, undefined, before);
+          if (healedLocator) {
+            Logger.success(`"${step.label}" via Layer 4 recovery on alternate page`);
+            if (isDebug) Logger.timeEnd(label);
+            return ok('selfheal', healedLocator.locator, 0, healedLocator.confidence);
+          }
+        }
+      } catch (e) {
+        Logger.debug(`Layer 4 page recovery failed: ${String(e).slice(0, 80)}`);
+      }
       layerResults.push({
         layer: 'Layer 4 (self-heal)',
-        reason: 'page was closed before DOM capture',
+        reason: 'page was closed — recovery attempted but failed. Check if navigation caused page close.',
       });
       if (isDebug) Logger.timeEnd(label);
       failWithContext(step, action, layerResults);
@@ -446,7 +466,17 @@ export async function runStepDetailed(page: Page, step: Step): Promise<StepResul
 
     Logger.debug(`Capturing DOM for self-heal on "${step.label}"`);
     const failingLocator = originalLocator(step);
-    const before = await captureDOM(page, 'before', failingLocator || undefined);
+
+    // Double check page is still alive before DOM capture
+    let before = '';
+    try {
+      if (isPageAlive(page)) {
+        before = await captureDOM(page, 'before', failingLocator || undefined) ?? '';
+      }
+    } catch (e) {
+      Logger.debug(`Layer 4: DOM capture failed — ${String(e).slice(0, 60)}`);
+    }
+
     let after = '';
 
     if (step.locator) {
